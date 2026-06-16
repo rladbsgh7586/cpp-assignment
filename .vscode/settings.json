@@ -1,0 +1,12 @@
+{
+  // 저장할 때 자동 포맷 (clang-format 이 .clang-format 규칙대로 정렬)
+  "editor.formatOnSave": true,
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  // Microsoft C/C++ 익스텐션의 IntelliSense 와 충돌 방지 (clangd 사용)
+  "C_Cpp.intelliSenseEngine": "disabled"
+}

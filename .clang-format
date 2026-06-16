@@ -1,0 +1,12 @@
+BasedOnStyle: Google
+IndentWidth: 2
+ColumnLimit: 80
+
+# 주석은 ColumnLimit 제외
+ReflowComments: false
+
+# pch.hpp 는 항상 최상단(Priority 음수) 고정
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '"pch\.hpp"'
+    Priority: -1
