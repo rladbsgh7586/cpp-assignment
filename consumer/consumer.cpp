@@ -11,15 +11,33 @@ Consumer::Consumer(asio::io_context& io, const std::string& host,
 
 void Consumer::OnReady() { asio::co_spawn(io_, TickLoop(), asio::detached); }
 
-// 주기마다 매수/매도 한쪽을 랜덤으로 골라 seed mid 부근 랜덤 목표가로 Reconcile.
+// 호가창 수신 시 mid 갱신
+void Consumer::OnOrderBook(const Orderbook& book) {
+  const bool has_bid = book.bid_qty[0] > 0;
+  const bool has_ask = book.ask_qty[0] > 0;
+  if (has_bid && has_ask)
+    mid_ = (book.bid_price[0] + book.ask_price[0]) / 2.0;
+  else if (has_bid)
+    mid_ = book.bid_price[0];
+  else if (has_ask)
+    mid_ = book.ask_price[0];
+}
+
+// 주기마다 매수/매도를 고른다.
+//  - side : mid 가 기준가보다 높으면 매도확률↑ -> 기준가로 평균회귀
+//  - 가격 : 현재 mid 부근 랜덤.
 asio::awaitable<void> Consumer::TickLoop() {
   std::uniform_int_distribution<int> delay(min_ms_, max_ms_);
   std::uniform_int_distribution<int> offset(-kPriceRange, kPriceRange);
-  std::bernoulli_distribution buy(0.5);
   boost::system::error_code ec;
   for (;;) {
-    const Side side = buy(rng_) ? Side::kBuy : Side::kSell;
-    Reconcile(side, std::max(1, kSeedMid + offset(rng_)));
+    // 기준가보다 현재 시장 mid가 높으면 sell확률 증가
+    const double dev = mid_ - kSeedMid;
+    const double p_sell = std::clamp(0.5 + kMeanReversionBias * dev, 0.0, 1.0);
+    const Side side =
+        std::bernoulli_distribution(p_sell)(rng_) ? Side::kSell : Side::kBuy;
+    const int center = static_cast<int>(mid_);  // 목표가는 현재 시장 기준
+    Reconcile(side, std::max(1, center + offset(rng_)));
 
     timer_.expires_after(std::chrono::milliseconds(delay(rng_)));
     co_await timer_.async_wait(asio::redirect_error(asio::use_awaitable, ec));

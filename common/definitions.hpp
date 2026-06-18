@@ -46,3 +46,4 @@ inline constexpr int kOrderQty = 10;  // 주문 수량
 // ---------------------------------------------------------------------------
 inline constexpr int kPriceRange = 15;  // 목표가 = seed mid ± 이 범위 랜덤
 inline constexpr int kMaxQty = 20;      // 주문 수량 랜덤 상한 (1~kMaxQty)
+inline constexpr double kMeanReversionBias = 0.02;  // 중앙수렴 가중치

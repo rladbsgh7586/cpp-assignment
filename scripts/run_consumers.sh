@@ -14,8 +14,9 @@ if [[ ! -x "$BIN" ]]; then
   exit 1
 fi
 
-# 로그(log/)는 cwd 기준으로 생성되므로, 실행 위치와 무관하게 repo 루트에 모은다.
-cd "$ROOT"
+# 로그(log/)는 cwd 기준으로 생성된다. client/server 와 동일하게 바이너리 위치
+# (build/output)에서 실행해 로그를 build/output/log 한 곳으로 통일한다.
+cd "$(dirname "$BIN")"
 
 pids=()
 cleanup() {
@@ -36,5 +37,5 @@ for ((i = 1; i <= N; i++)); do
   pids+=("$!")
 done
 
-echo "launched $N consumers (Ctrl-C 로 전체 종료) — 로그: $ROOT/log/consumer.log"
+echo "launched $N consumers (Ctrl-C 로 전체 종료) — 로그: $(dirname "$BIN")/log/consumer.log"
 wait

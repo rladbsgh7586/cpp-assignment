@@ -89,11 +89,9 @@ asio::awaitable<void> BaseClient::OeReader() {
       case ResultType::kSuccess:  // 주문 체결
         LOG_INFO("주문 체결 {} {}@{}", SideStr(pack.side), pack.qty,
                  pack.price);
-        if (pack.price == s.price) {
-          s.qty -= pack.qty;
-          // 전량 체결 -> 주문 소멸. 다음 목표가 계산 시 신규 등록.
-          if (s.qty <= 0) s.state = OeState::kIdle;
-        }
+        s.qty -= pack.qty;
+        // 전량 체결 -> 주문 소멸. 다음 목표가 계산 시 신규 등록.
+        if (s.qty <= 0) s.state = OeState::kIdle;
         break;
     }
   }

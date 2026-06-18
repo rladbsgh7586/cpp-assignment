@@ -89,8 +89,8 @@ void MatchingEngine::Match(int client_id, Side side, int price, int& qty,
           {client_id, ResultType::kSuccess, side, rest_price, matched_qty});
       out.push_back({rest_order.client_id, ResultType::kSuccess, opp_side,
                      rest_price, matched_qty});
-      LOG_DEBUG("체결 {}@{} taker=#{} maker=#{}", matched_qty, rest_price,
-                client_id, rest_order.client_id);
+      LOG_INFO("체결 {}@{} taker=#{} maker=#{}", matched_qty, rest_price,
+               client_id, rest_order.client_id);
 
       if (rest_order.qty == 0) fifo.pop_front();
     }
@@ -108,7 +108,7 @@ void MatchingEngine::Rest(int client_id, Side side, int price, int qty,
   else
     asks_[price].push_back(ro);
   out.push_back({client_id, ResultType::kAccepted, side, price, qty});
-  LOG_DEBUG("등록 #{} {} {}@{}", client_id, SideStr(side), qty, price);
+  LOG_INFO("등록 #{} {} {}@{}", client_id, SideStr(side), qty, price);
 }
 
 // 주문 취소
@@ -133,7 +133,7 @@ void MatchingEngine::Cancel(int client_id, Side side, int price,
   if (ok) {
     dirty = true;
     out.push_back({client_id, ResultType::kCancelled, side, price, 0});
-    LOG_DEBUG("취소 #{} {} @{}", client_id, SideStr(side), price);
+    LOG_INFO("취소 #{} {} @{}", client_id, SideStr(side), price);
     return;
   }
 

@@ -1,7 +1,7 @@
 #include "pch.hpp"
 
 namespace {
-logger::LogLv s_globalLogLevel = logger::LogLv::kDebug;
+logger::LogLv s_globalLogLevel = logger::LogLv::kInfo;  // -d 시 kDebug 로 낮춤
 std::mutex s_logMutex;
 std::ofstream s_logFile;
 std::string s_procName = "-";
