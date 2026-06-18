@@ -168,10 +168,6 @@ void Server::Stop() {
 
 // 초기 호가창 주문 생성
 void Server::InitBook() {
-  static constexpr int kSeedMid = 100;
-  static constexpr int kSeedQty = 50;
-  static constexpr int kSeedClientId = -10;  // 가상 client
-
   bool dummy = false;
   for (int i = 0; i < kNumLayers; ++i) {
     engine_.PushOrder(kSeedClientId, {Side::kBuy, kSeedMid - 1 - i, kSeedQty},

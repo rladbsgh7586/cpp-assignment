@@ -48,10 +48,12 @@ void InitFileLog(const std::string& name) {
   s_logFile.open(path, std::ios::out | std::ios::app);
 }
 
-void SetInstanceId(int id) {
+void SetInstanceId(const std::string& id) {
   std::lock_guard<std::mutex> lk(s_logMutex);
   s_procTag = std::format("{}#{}", s_procName, id);
 }
+
+void SetInstanceId(int id) { SetInstanceId(std::to_string(id)); }
 
 namespace detail {
 

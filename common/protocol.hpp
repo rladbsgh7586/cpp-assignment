@@ -6,25 +6,10 @@
 #include "pch.hpp"
 
 // ---------------------------------------------------------------------------
-// 네트워크
-// ---------------------------------------------------------------------------
-inline constexpr char kServerHost[] = "127.0.0.1";  // client 접속 대상
-inline constexpr unsigned short kPortBase = 9000;   // 기본 포트
-inline constexpr int kMarketDataPortOffset = 0;     // PORT_BASE + 0
-inline constexpr int kOrderEntryPortOffset = 1;     // PORT_BASE + 1
-
-// ---------------------------------------------------------------------------
 // orderbook 프로토콜
 // ---------------------------------------------------------------------------
 // 과제문서 order book format 참고
-
-inline constexpr int kNumLayers = 5;  // 호가 단계 수
-inline constexpr int kTickerLen = 4;  // Ticker string bytes
-inline constexpr int kPriceLen = 5;   // Price string bytes
-inline constexpr int kQtyLen = 4;     // Quantity string bytes
-
-inline constexpr int kOrderBookSize =
-    kTickerLen + 2 * kNumLayers * kPriceLen + 2 * kNumLayers * kQtyLen;  // 94
+// 네트워크/호가창 관련 상수는 common/definitions.hpp 참고
 
 // 필드 단위
 using TickerField = std::array<uint8_t, kTickerLen>;

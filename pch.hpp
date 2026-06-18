@@ -59,10 +59,13 @@
 namespace asio = boost::asio;
 using asio::ip::tcp;
 
-/* ── 프로젝트 헤더 ─────────────────────────────────── */
-#include "common/basictype.hpp"
+// 프로젝트 헤더 - 헤더 간 의존 순서를 수동 유지
+// clang-format off
+#include "common/definitions.hpp"
 #include "common/keyboardinput.hpp"
 #include "common/logger.hpp"
 #include "common/protocol.hpp"
 #include "common/matchengine.hpp"
 #include "common/util.hpp"
+#include "common/baseclient.hpp"
+// clang-format on

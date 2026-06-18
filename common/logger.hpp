@@ -22,6 +22,7 @@ void InitFileLog(const std::string& name);
 
 // 로그 태그를 "<name>#<id>" 로 갱신 (예: 서버가 배정한 client 번호 수신 시)
 void SetInstanceId(int id);
+void SetInstanceId(const std::string& id);
 
 namespace detail {
 
