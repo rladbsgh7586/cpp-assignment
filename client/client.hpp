@@ -7,8 +7,9 @@
 
 class Client : public BaseClient {
  public:
+  // debug=true 이면 주문처리 latency 를 측정
   Client(asio::io_context& io, const std::string& host, uint16_t port_base,
-         int q, int n);
+         int q, int n, bool debug = false);
 
  private:
   // 호가창 수신 시 Q/N 기반 목표 최우선호가를 계산해 양 side 재조정.

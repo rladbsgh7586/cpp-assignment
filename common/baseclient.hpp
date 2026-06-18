@@ -8,7 +8,9 @@
 
 class BaseClient {
  public:
-  BaseClient(asio::io_context& io, const std::string& host, uint16_t port_base);
+  // measure_latency=true 이면 주문 round-trip latency 를 측정/기록한다.
+  BaseClient(asio::io_context& io, const std::string& host, uint16_t port_base,
+             bool measure_latency = false);
   virtual ~BaseClient() = default;
 
   void Stop();  // 양 채널 종료 (+ 파생 정리 훅 OnStop)
@@ -58,4 +60,16 @@ class BaseClient {
   tcp::socket oe_socket_;
   tcp::resolver resolver_;
   bool oe_ready_ = false;
+
+  // latency 측정
+  struct SendHistory {
+    std::chrono::steady_clock::time_point sent;
+    int64_t send_epoch_ns;
+    Side side;
+    int price;
+  };
+  bool latency_enabled_ = false;
+  uint32_t next_seq_ = 1;
+  std::unordered_map<uint32_t, SendHistory> inflight_;
+  std::optional<LatencyLog> latency_log_;
 };

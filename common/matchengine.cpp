@@ -33,11 +33,12 @@ std::vector<OrderResult> MatchingEngine::PushOrder(int client_id,
   dirty = false;
 
   if (order.qty == 0) {  // 주문취소
-    Cancel(client_id, order.side, order.price, out, dirty);
+    Cancel(client_id, order.seq, order.side, order.price, out, dirty);
     return out;
   }
   if (order.qty < 0 || order.price <= 0) {  // 잘못된 주문
-    out.push_back({client_id, ResultType::kReject, order.side, order.price, 0});
+    out.push_back({client_id, ResultType::kReject, order.side, order.price, 0,
+                   order.seq});
     LOG_WARN("주문 거부: 잘못된 price/qty (client #{} {} {}@{})", client_id,
              SideStr(order.side), order.qty, order.price);
     return out;
@@ -46,14 +47,16 @@ std::vector<OrderResult> MatchingEngine::PushOrder(int client_id,
   int qty = order.qty;
   // 주문 체결
   if (order.side == Side::kBuy) {
-    Match(client_id, order.side, order.price, qty, asks_, out, dirty);
+    Match(client_id, order.seq, order.side, order.price, qty, asks_, out,
+          dirty);
   } else {
-    Match(client_id, order.side, order.price, qty, bids_, out, dirty);
+    Match(client_id, order.seq, order.side, order.price, qty, bids_, out,
+          dirty);
   }
 
   if (qty > 0) {
     // 체결되지 않은 주문은 orderbook 에 등록
-    Rest(client_id, order.side, order.price, qty, out);
+    Rest(client_id, order.seq, order.side, order.price, qty, out);
     dirty = true;
   }
   return out;
@@ -62,8 +65,8 @@ std::vector<OrderResult> MatchingEngine::PushOrder(int client_id,
 template <typename OppMap>
 // 주문 체결 - price까지 qty만큼 반대편 호가를 체결 진행
 // 참고 AskMap = std::map<int, std::deque<RestingOrder>, std::greater<int>>;
-void MatchingEngine::Match(int client_id, Side side, int price, int& qty,
-                           OppMap& opp, std::vector<OrderResult>& out,
+void MatchingEngine::Match(int client_id, uint32_t seq, Side side, int price,
+                           int& qty, OppMap& opp, std::vector<OrderResult>& out,
                            bool& dirty) {
   const bool is_buy = side == Side::kBuy;
   const Side opp_side = is_buy ? Side::kSell : Side::kBuy;
@@ -85,10 +88,10 @@ void MatchingEngine::Match(int client_id, Side side, int price, int& qty,
       rest_order.qty -= matched_qty;
       dirty = true;
 
-      out.push_back(
-          {client_id, ResultType::kSuccess, side, rest_price, matched_qty});
+      out.push_back({client_id, ResultType::kSuccess, side, rest_price,
+                     matched_qty, seq});
       out.push_back({rest_order.client_id, ResultType::kSuccess, opp_side,
-                     rest_price, matched_qty});
+                     rest_price, matched_qty, rest_order.seq});
       LOG_INFO("체결 {}@{} taker=#{} maker=#{}", matched_qty, rest_price,
                client_id, rest_order.client_id);
 
@@ -100,19 +103,19 @@ void MatchingEngine::Match(int client_id, Side side, int price, int& qty,
 }
 
 // 주문 등록
-void MatchingEngine::Rest(int client_id, Side side, int price, int qty,
-                          std::vector<OrderResult>& out) {
-  RestingOrder ro{client_id, qty};
+void MatchingEngine::Rest(int client_id, uint32_t seq, Side side, int price,
+                          int qty, std::vector<OrderResult>& out) {
+  RestingOrder ro{client_id, qty, seq};
   if (side == Side::kBuy)
     bids_[price].push_back(ro);
   else
     asks_[price].push_back(ro);
-  out.push_back({client_id, ResultType::kAccepted, side, price, qty});
+  out.push_back({client_id, ResultType::kAccepted, side, price, qty, seq});
   LOG_INFO("등록 #{} {} {}@{}", client_id, SideStr(side), qty, price);
 }
 
 // 주문 취소
-void MatchingEngine::Cancel(int client_id, Side side, int price,
+void MatchingEngine::Cancel(int client_id, uint32_t seq, Side side, int price,
                             std::vector<OrderResult>& out, bool& dirty) {
   // 주문 성격 (Bid, Ask)에 맞게 알맞은 Map에서 search + erase
   auto remove_from = [&](auto& book) -> bool {
@@ -132,13 +135,13 @@ void MatchingEngine::Cancel(int client_id, Side side, int price,
   const bool ok = side == Side::kBuy ? remove_from(bids_) : remove_from(asks_);
   if (ok) {
     dirty = true;
-    out.push_back({client_id, ResultType::kCancelled, side, price, 0});
+    out.push_back({client_id, ResultType::kCancelled, side, price, 0, seq});
     LOG_INFO("취소 #{} {} @{}", client_id, SideStr(side), price);
     return;
   }
 
   // 취소 실패. 주문 미존재 (이미 체결됐거나 다른 이유)
-  out.push_back({client_id, ResultType::kReject, side, price, 0});
+  out.push_back({client_id, ResultType::kReject, side, price, 0, seq});
   LOG_INFO("취소 거부 #{} {} @{} (주문 미존재)", client_id, SideStr(side),
            price);
 }

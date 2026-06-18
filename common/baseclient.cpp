@@ -1,8 +1,12 @@
 #include "pch.hpp"
 
 BaseClient::BaseClient(asio::io_context& io, const std::string& host,
-                       uint16_t port_base)
-    : io_(io), md_socket_(io), oe_socket_(io), resolver_(io) {
+                       uint16_t port_base, bool measure_latency)
+    : io_(io),
+      md_socket_(io),
+      oe_socket_(io),
+      resolver_(io),
+      latency_enabled_(measure_latency) {
   asio::co_spawn(io_, Run(host, port_base), asio::detached);
 }
 
@@ -45,6 +49,8 @@ asio::awaitable<void> BaseClient::ConnectOrderEntry(const std::string& host,
   }
   oe_ready_ = true;
   OnAssignedId(my_id);
+  // latency 측정 활성화 시, 배정받은 client 번호로 기록 파일 생성
+  if (latency_enabled_) latency_log_.emplace(my_id);
   LOG_INFO("주문채널 연결성공 (배정 #{})", my_id);
 }
 
@@ -59,6 +65,22 @@ asio::awaitable<void> BaseClient::OeReader() {
     if (ec) {
       LOG_WARN("주문채널 수신 종료: {}", ec.message());
       co_return;
+    }
+
+    // latency 측정: 해당 주문(seq)의 응답 도착 -> latency 기록
+    if (latency_enabled_) {
+      auto it = inflight_.find(pack.seq);
+      if (it != inflight_.end()) {
+        const auto now = std::chrono::steady_clock::now();
+        const int64_t latency_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                now - it->second.sent)
+                .count();
+        if (latency_log_)
+          latency_log_->Record(it->second.send_epoch_ns, it->second.side,
+                               it->second.price, latency_ns);
+        inflight_.erase(it);
+      }
     }
 
     // 주문결과패킷 처리
@@ -169,7 +191,19 @@ void BaseClient::Reconcile(Side side, int desired) {
 }
 
 void BaseClient::SendOrder(Side side, int price, int qty) {
-  OrderPacket pack{side, price, qty};
+  const uint32_t seq = next_seq_++;
+  OrderPacket pack{side, price, qty, seq};
+
+  // latency 측정: 송신시간 기록
+  if (latency_enabled_) {
+    const auto now = std::chrono::steady_clock::now();
+    const auto epoch_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+    inflight_[seq] = SendHistory{now, epoch_ns, side, price};
+  }
+
   boost::system::error_code ec;
   asio::write(oe_socket_, asio::buffer(&pack, sizeof(pack)), ec);
   if (ec) LOG_WARN("주문 송신 실패: {}", ec.message());

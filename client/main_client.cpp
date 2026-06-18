@@ -15,13 +15,16 @@
 
 int main(int argc, char** argv) {
   // arg parse
+  bool debug = false;
   std::vector<std::string_view> pos;
   for (int i = 1; i < argc; ++i) {
     std::string_view a = argv[i];
-    if (a == "-d" || a == "--debug")
+    if (a == "-d" || a == "--debug") {
       logger::SetLogLevel(logger::LogLv::kDebug);
-    else
+      debug = true;  // latency 측정 활성화
+    } else {
       pos.push_back(a);
+    }
   }
 
   int q = 0, n = 0;
@@ -33,7 +36,7 @@ int main(int argc, char** argv) {
   logger::InitFileLog("client");
 
   asio::io_context io;
-  Client client(io, kServerHost, kPortBase, q, n);
+  Client client(io, kServerHost, kPortBase, q, n, debug);
   KeyboardInput quit(io, 'q', [&] {
     LOG_INFO("q 입력 - 클라이언트 종료");
     client.Stop();

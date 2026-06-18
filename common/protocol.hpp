@@ -48,9 +48,10 @@ struct OrderPacket {
   Side side = Side::kBuy;
   int32_t price = 0;
   int32_t qty = 0;
+  uint32_t seq = 0;  // 주문 일련번호 (주문처리 latency 측정목적)
 };
-static_assert(sizeof(OrderPacket) == 12,
-              "OrderPacket must be a packed 12-byte record");
+static_assert(sizeof(OrderPacket) == 16,
+              "OrderPacket must be a packed 16-byte record");
 
 enum class ResultType : int32_t {
   kSuccess = 0,    // 체결
@@ -63,7 +64,8 @@ struct OrderResultPacket {
   ResultType type = ResultType::kSuccess;
   Side side = Side::kBuy;
   int32_t price = 0;
-  int32_t qty = 0;  // fill: 체결수량 / reject: 거부된 주문 수량
+  int32_t qty = 0;   // fill: 체결수량 / reject: 거부된 주문 수량
+  uint32_t seq = 0;  // 주문 일련번호  (주문처리 latency 측정목적)
 };
-static_assert(sizeof(OrderResultPacket) == 16,
-              "ExecPacket must be a packed 16-byte record");
+static_assert(sizeof(OrderResultPacket) == 20,
+              "ExecPacket must be a packed 20-byte record");

@@ -1,6 +1,7 @@
 # 공통 라이브러리 + PCH
 add_library(common STATIC
     baseclient.cpp
+    latencylog.cpp
     logger.cpp
     matchengine.cpp
     util.cpp)

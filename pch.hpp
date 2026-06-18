@@ -67,5 +67,6 @@ using asio::ip::tcp;
 #include "common/protocol.hpp"
 #include "common/matchengine.hpp"
 #include "common/util.hpp"
+#include "common/latencylog.hpp"
 #include "common/baseclient.hpp"
 // clang-format on

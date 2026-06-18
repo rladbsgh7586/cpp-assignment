@@ -22,6 +22,7 @@ struct OrderResult {
   Side side;
   int price;
   int qty;
+  uint32_t seq;  // 주문 일련번호 (주문처리 latency 측정목적)
 };
 
 class MatchingEngine {
@@ -38,7 +39,8 @@ class MatchingEngine {
  private:
   struct RestingOrder {
     int client_id;
-    int qty;  // 잔량 (FIFO 순서는 deque 삽입 순서로 보장)
+    int qty;       // 잔량 (FIFO 순서는 deque 삽입 순서로 보장)
+    uint32_t seq;  // 주문 일련번호 (주문처리 latency 측정목적)
   };
   // price, order queue, 정렬 순서
   // BidMap: 매수니까 내림차순 예) 100(최우선 매수호가), 99, 98, ..
@@ -56,13 +58,13 @@ class MatchingEngine {
   // dirty = false -> 주문 취소로 인해 orderbook 변경없음 -> broadcast 필요없음
   // 주문 체결
   template <typename OppMap>
-  void Match(int client_id, Side side, int price, int& qty, OppMap& opp,
-             std::vector<OrderResult>& out, bool& dirty);
+  void Match(int client_id, uint32_t seq, Side side, int price, int& qty,
+             OppMap& opp, std::vector<OrderResult>& out, bool& dirty);
   // 주문 등록
-  void Rest(int client_id, Side side, int price, int qty,
+  void Rest(int client_id, uint32_t seq, Side side, int price, int qty,
             std::vector<OrderResult>& out);
   // 주문 취소
-  void Cancel(int client_id, Side side, int price,
+  void Cancel(int client_id, uint32_t seq, Side side, int price,
               std::vector<OrderResult>& out, bool& dirty);
 
   BidMap bids_;  // 가격 내림차순

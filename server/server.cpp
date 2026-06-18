@@ -137,7 +137,7 @@ void Server::SendOrderResults(const std::vector<OrderResult>& results) {
     auto it = oe_sessions_.find(r.client_id);
     if (it == oe_sessions_.end()) continue;  // 세션이 이미 종료됨
     auto& s = it->second;
-    s->wq.push_back(OrderResultPacket{r.type, r.side, r.price, r.qty});
+    s->wq.push_back(OrderResultPacket{r.type, r.side, r.price, r.qty, r.seq});
     if (!s->writing) {
       s->writing = true;
       asio::co_spawn(io_, OeWriter(s), asio::detached);
