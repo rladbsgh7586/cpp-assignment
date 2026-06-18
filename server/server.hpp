@@ -10,6 +10,12 @@
 
 #include "server/session.hpp"
 
+// 매칭엔진 스레드로 넘기는 주문 1건
+struct InboundOrder {
+  int client_id;
+  OrderPacket order;
+};
+
 class Server {
  public:
   Server(asio::io_context& io, unsigned short port_base);
@@ -25,7 +31,10 @@ class Server {
 
   // 매칭 결과를 각 주문 client 에게 전송 / 전체 구독자에 스냅샷 발행.
   void SendOrderResults(const std::vector<OrderResult>& results);
-  void BroadcastOrderBook();
+  void BroadcastOrderBook(const OrderBookPacket& snapshot);
+
+  // 매칭엔진 전용 스레드 루프
+  void EngineLoop(std::stop_token st);
 
   // 서버 시작 시 초기 호가창 주문 삽입
   // price: 95 ~ 105
@@ -40,4 +49,10 @@ class Server {
   std::unordered_map<int, std::shared_ptr<OeSession>> oe_sessions_;
   int next_md_id_ = 1;
   int next_oe_id_ = 1;
+
+  ConcurrentQueue<InboundOrder> inbound_;  // io -> engine (FIFO)
+  OrderBookPacket latest_book_{};
+
+  // 매칭엔진 스레드
+  std::jthread engine_thread_;
 };

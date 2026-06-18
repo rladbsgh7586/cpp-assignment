@@ -11,8 +11,38 @@ Server::Server(asio::io_context& io, unsigned short port_base)
                                      static_cast<unsigned short>(
                                          port_base + kOrderEntryPortOffset))) {
   InitBook();
+  latest_book_ = engine_.ExtractOrderBook();
+
+  // 매칭엔진 전용 스레드
+  engine_thread_ = std::jthread([this](std::stop_token st) { EngineLoop(st); });
+
   asio::co_spawn(io_, MdListener(), asio::detached);
   asio::co_spawn(io_, OeListener(), asio::detached);
+}
+
+// 매칭엔진 전용 스레드
+//  - inbound 큐에서 받은 순서대로 처리(FIFO)
+//  - 결과/스냅샷을 io 로 post.
+void Server::EngineLoop(std::stop_token st) {
+  InboundOrder item;
+  while (inbound_.WaitPop(st, item)) {
+    bool dirty = false;
+    std::vector<OrderResult> results =
+        engine_.PushOrder(item.client_id, item.order, dirty);
+
+    std::optional<OrderBookPacket> snapshot;
+    if (dirty) snapshot = engine_.ExtractOrderBook();
+
+    // OrderResult 발행
+    asio::post(io_, [this, results = std::move(results),
+                     snapshot = std::move(snapshot)] {
+      SendOrderResults(results);
+      if (snapshot) {
+        latest_book_ = *snapshot;  // io 스레드 전용
+        BroadcastOrderBook(*snapshot);
+      }
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -28,8 +58,8 @@ asio::awaitable<void> Server::MdListener() {
       md_sessions_[id] = s;
       LOG_INFO("client #{} 연결 (현재 {})", id, md_sessions_.size());
 
-      // 최초 연결 시 현재 호가창을 1회 즉시 전송
-      s->pending = engine_.ExtractOrderBook();
+      // 최초 연결 시 캐시된 최신 호가창을 1회 즉시 전송
+      s->pending = latest_book_;
       s->has_pending = true;
       s->writing = true;
       asio::co_spawn(io_, MdWriter(s), asio::detached);
@@ -39,8 +69,7 @@ asio::awaitable<void> Server::MdListener() {
     // acceptor 닫힘(Stop) -> 수락 종료
   }
 }
-void Server::BroadcastOrderBook() {
-  OrderBookPacket pkt = engine_.ExtractOrderBook();
+void Server::BroadcastOrderBook(const OrderBookPacket& pkt) {
   LOG_DEBUG("호가창 발행{}", FormatBook(Parse(pkt)));
   for (auto& [id, s] : md_sessions_) {
     s->pending = pkt;
@@ -115,16 +144,9 @@ asio::awaitable<void> Server::OeReader(std::shared_ptr<OeSession> s) {
                               asio::redirect_error(asio::use_awaitable, ec));
     if (ec) break;
 
-    bool dirty = false;
-    std::vector<OrderResult> execs =
-        engine_.PushOrder(s->client_id, order, dirty);
-    // 주문 결과는 즉시 해당 클라이언트로 전송
-    SendOrderResults(execs);
-
-    // 호가창 변경시 OrderBook 발행
-    if (dirty) {
-      BroadcastOrderBook();
-    }
+    // 동기 처리 제거
+    // order는 queue push후 통신역할만
+    inbound_.Push(InboundOrder{s->client_id, order});
   }
   oe_sessions_.erase(s->client_id);
   LOG_INFO("주문 client #{} 연결 종료 (현재 {})", s->client_id,
@@ -164,6 +186,9 @@ void Server::Stop() {
   for (auto& [id, s] : oe_sessions_) s->socket.close();
   md_sessions_.clear();
   oe_sessions_.clear();
+
+  // 매칭엔진 스레드 종료 요청
+  engine_thread_.request_stop();
 }
 
 // 초기 호가창 주문 생성

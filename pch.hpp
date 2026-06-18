@@ -51,6 +51,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <stop_token>
 #include <thread>
 
 // boost 네트워크
@@ -67,6 +68,7 @@ using asio::ip::tcp;
 #include "common/protocol.hpp"
 #include "common/matchengine.hpp"
 #include "common/util.hpp"
+#include "common/concurrentqueue.hpp"
 #include "common/latencylog.hpp"
 #include "common/baseclient.hpp"
 // clang-format on
