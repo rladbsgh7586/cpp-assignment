@@ -47,18 +47,17 @@ static_assert(sizeof(OrderBookPacket) == kOrderBookSize,
 // ---------------------------------------------------------------------------
 // 주문 프로토콜
 // ---------------------------------------------------------------------------
-// client -> server:
 //   주문전송
-//   Side : 매수/매도
+//   side  : 매수/매도
 //   price : 주문가격
-//   qty : 주문량
+//   qty   : 주문량
 //   qty == 0 : 해당 'side'/'price'의 주문 취소
 //
-// server -> client:
-//   체결결과
-//   주문이 'side'/'price'에서 'qty'만큼 체결됨.
+// server -> client (OrderResultPacket):
+//   체결(Sucess) : 'side'/'price'에서 'qty'만큼 체결됨
+//   거부(reject): 이미 체결됐거나 존재하지 않는 주문에 대한 취소 요청
 
-enum class Side : int32_t { kBuy = 0, KSell = 1 };
+enum class Side : int32_t { kBuy = 0, kSell = 1 };
 
 struct OrderPacket {
   Side side = Side::kBuy;
@@ -67,3 +66,19 @@ struct OrderPacket {
 };
 static_assert(sizeof(OrderPacket) == 12,
               "OrderPacket must be a packed 12-byte record");
+
+enum class ResultType : int32_t {
+  kSuccess = 0,    // 체결
+  kReject = 1,     // 취소 거부 (이미 체결/미존재)
+  kCancelled = 2,  // 취소 완료
+  kAccepted = 3    // 신규주문 등록 완료
+};
+
+struct OrderResultPacket {
+  ResultType type = ResultType::kSuccess;
+  Side side = Side::kBuy;
+  int32_t price = 0;
+  int32_t qty = 0;  // fill: 체결수량 / reject: 거부된 주문 수량
+};
+static_assert(sizeof(OrderResultPacket) == 16,
+              "ExecPacket must be a packed 16-byte record");

@@ -19,17 +19,20 @@
 
 /* ── C++ 표준 라이브러리 ───────────────────────────── */
 #include <algorithm>
+#include <charconv>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <optional>
+#include <random>
 #include <source_location>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -60,5 +63,6 @@ using asio::ip::tcp;
 #include "common/basictype.hpp"
 #include "common/keyboardinput.hpp"
 #include "common/logger.hpp"
-#include "common/orderbook.hpp"
 #include "common/protocol.hpp"
+#include "common/matchengine.hpp"
+#include "common/util.hpp"

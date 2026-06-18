@@ -1,4 +1,5 @@
 // std::format 기반 로거 (C++20)
+// 각 로그 라인에 pid/tid/source_location등 출력
 #pragma once
 
 #include "pch.hpp"
@@ -18,6 +19,9 @@ LogLv GetLogLevel();
 
 // 호출시 log/<name>.log 파일에도 로그 출력
 void InitFileLog(const std::string& name);
+
+// 로그 태그를 "<name>#<id>" 로 갱신 (예: 서버가 배정한 client 번호 수신 시)
+void SetInstanceId(int id);
 
 namespace detail {
 

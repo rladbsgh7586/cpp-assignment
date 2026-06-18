@@ -4,6 +4,8 @@ namespace {
 logger::LogLv s_globalLogLevel = logger::LogLv::kDebug;
 std::mutex s_logMutex;
 std::ofstream s_logFile;
+std::string s_procName = "-";
+std::string s_procTag = "-";
 
 long current_tid() { return static_cast<long>(syscall(SYS_gettid)); }
 
@@ -39,19 +41,26 @@ LogLv GetLogLevel() { return s_globalLogLevel; }
 
 void InitFileLog(const std::string& name) {
   std::lock_guard<std::mutex> lk(s_logMutex);
+  s_procName = name;
+  s_procTag = std::to_string(getpid());  // 초기엔 PID 만
   std::filesystem::create_directories("log");
   std::string path = "log/" + name + ".log";
   s_logFile.open(path, std::ios::out | std::ios::app);
+}
+
+void SetInstanceId(int id) {
+  std::lock_guard<std::mutex> lk(s_logMutex);
+  s_procTag = std::format("{}#{}", s_procName, id);
 }
 
 namespace detail {
 
 void write(std::string_view header, std::string_view body,
            const std::source_location& loc) {
-  std::string line =
-      std::format("{} [ {:>6} ]  [{:>6}] {} on {}:{}-{}", get_date_time(),
-                  header, current_tid(), body, base_name(loc.file_name()),
-                  loc.line(), extract_func(loc.function_name()));
+  std::string line = std::format(
+      "{} [ {:>6} ] [{:>8}] [{:>6}] {} on {}:{}-{}", get_date_time(), header,
+      s_procTag, current_tid(), body, base_name(loc.file_name()), loc.line(),
+      extract_func(loc.function_name()));
 
   std::lock_guard<std::mutex> lk(s_logMutex);
   std::printf("%s\n", line.c_str());

@@ -11,11 +11,11 @@ class KeyboardInput {
       : stdin_(io, dup(STDIN_FILENO)),
         key_(key),
         callback_(std::move(callback)) {
-    enable_raw_mode();
-    asio::co_spawn(stdin_.get_executor(), watch(), asio::detached);
+    EnableRawMode();
+    asio::co_spawn(stdin_.get_executor(), Watch(), asio::detached);
   }
 
-  ~KeyboardInput() { restore_mode(); }
+  ~KeyboardInput() { RestoreMode(); }
 
   // rule of five
   KeyboardInput(const KeyboardInput&) = delete;
@@ -25,7 +25,7 @@ class KeyboardInput {
 
  private:
   // canonical(줄 단위) + echo 를 꺼서 키 하나가 즉시 들어오게 한다.
-  void enable_raw_mode() {
+  void EnableRawMode() {
     if (tcgetattr(STDIN_FILENO, &orig_termios_) != 0) {
       return;
     }
@@ -37,7 +37,7 @@ class KeyboardInput {
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
   }
 
-  void restore_mode() {
+  void RestoreMode() {
     if (raw_active_) {
       tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios_);
       raw_active_ = false;
@@ -45,7 +45,7 @@ class KeyboardInput {
   }
 
   // target key가 도착하면 callback 호출
-  asio::awaitable<void> watch() {
+  asio::awaitable<void> Watch() {
     try {
       char ch = 0;
       for (;;) {
